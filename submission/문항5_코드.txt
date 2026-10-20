@@ -1,0 +1,204 @@
+===== src/main/java/com/example/post/controller/PostController.java =====
+package com.example.post.controller;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import com.example.post.service.PostService;
+import jakarta.validation.Valid;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+@Controller
+public class PostController {
+    private final PostService service;
+    public PostController(PostService service) { this.service = service; }
+    @GetMapping("/") public String index() { return "index"; }
+    @GetMapping("/Post/list")
+    public String list(@RequestParam(defaultValue="1") int page, Model model) {
+        Page pagination = new Page(page, service.count());
+        model.addAttribute("posts", service.list(pagination));
+        model.addAttribute("page", pagination);
+        return "Post/list";
+    }
+    @GetMapping("/Post/read")
+    public String read(@RequestParam("PostNo") Long postNo, Model model) {
+        model.addAttribute("post", service.read(postNo));
+        return "Post/read";
+    }
+    @GetMapping("/Post/insert")
+    public String insertForm(Model model) {
+        model.addAttribute("post", new Post());
+        return "Post/insert";
+    }
+    @PostMapping("/Post/insert")
+    public String insert(@Valid @ModelAttribute("post") Post post, BindingResult errors) {
+        if (errors.hasErrors()) return "Post/insert";
+        // 생성 요청에서는 클라이언트가 전달한 식별자를 사용하지 않는다.
+        post.setPostNo(null);
+        service.insert(post);
+        return "redirect:/Post/read?PostNo=" + post.getPostNo();
+    }
+    @GetMapping("/Post/update")
+    public String updateForm(@RequestParam("PostNo") Long postNo, Model model) {
+        model.addAttribute("post", service.read(postNo));
+        return "Post/update";
+    }
+    @PostMapping("/Post/update")
+    public String update(@RequestParam("PostNo") Long postNo,
+                         @Valid @ModelAttribute("post") Post post, BindingResult errors) {
+        post.setPostNo(postNo);
+        if (errors.hasErrors()) return "Post/update";
+        service.update(post);
+        return "redirect:/Post/read?PostNo=" + postNo;
+    }
+    @PostMapping("/Post/delete")
+    public String delete(@RequestParam("PostNo") Long postNo) {
+        service.delete(postNo);
+        return "redirect:/Post/list";
+    }
+}
+
+
+===== src/main/java/com/example/post/service/PostService.java =====
+package com.example.post.service;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import java.util.List;
+public interface PostService {
+    List<Post> list(Page page);
+    long count();
+    Post read(Long postNo);
+    void insert(Post post);
+    void update(Post post);
+    void delete(Long postNo);
+}
+
+
+===== src/main/java/com/example/post/service/PostServiceImpl.java =====
+package com.example.post.service;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import com.example.post.mapper.PostMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.List;
+@Service
+@Transactional(readOnly=true)
+public class PostServiceImpl implements PostService {
+    private final PostMapper mapper;
+    public PostServiceImpl(PostMapper mapper) { this.mapper = mapper; }
+    @Override public List<Post> list(Page page) { return mapper.selectList(page); }
+    @Override public long count() { return mapper.count(); }
+    @Override public Post read(Long postNo) {
+        Post post = mapper.selectById(postNo);
+        if (post == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+        return post;
+    }
+    @Override @Transactional public void insert(Post post) {
+        if (mapper.insert(post) != 1) throw new IllegalStateException("등록에 실패했습니다.");
+    }
+    @Override @Transactional public void update(Post post) {
+        if (mapper.update(post) != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+    }
+    @Override @Transactional public void delete(Long postNo) {
+        if (mapper.delete(postNo) != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+    }
+}
+
+
+===== src/main/java/com/example/post/mapper/PostMapper.java =====
+package com.example.post.mapper;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import java.util.List;
+@Mapper
+public interface PostMapper {
+    List<Post> selectList(Page page);
+    long count();
+    Post selectById(@Param("postNo") Long postNo);
+    int insert(Post post);
+    int update(Post post);
+    int delete(@Param("postNo") Long postNo);
+}
+
+
+===== src/main/java/com/example/post/dto/Page.java =====
+package com.example.post.dto;
+/** 1페이지 10개, 페이지 번호는 5개씩 표시한다. */
+public class Page {
+    private final int page;
+    private final int size = 10;
+    private final long totalCount;
+    private final int totalPages;
+    private final int startPage;
+    private final int endPage;
+    public Page(int requestedPage, long totalCount) {
+        this.totalCount = Math.max(0, totalCount);
+        this.totalPages = (int) Math.max(1, (this.totalCount + size - 1) / size);
+        this.page = Math.max(1, Math.min(requestedPage, totalPages));
+        this.startPage = ((page - 1) / 5) * 5 + 1;
+        this.endPage = Math.min(startPage + 4, totalPages);
+    }
+    public int getPage() { return page; }
+    public int getSize() { return size; }
+    public long getOffset() { return (long) (page - 1) * size; }
+    public long getTotalCount() { return totalCount; }
+    public int getTotalPages() { return totalPages; }
+    public int getStartPage() { return startPage; }
+    public int getEndPage() { return endPage; }
+    public boolean isHasPrevious() { return page > 1; }
+    public boolean isHasNext() { return page < totalPages; }
+}
+
+
+===== src/main/resources/mapper/PostMapper.xml =====
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.post.mapper.PostMapper">
+    <resultMap id="postMap" type="com.example.post.dto.Post">
+        <id property="postNo" column="post_no"/>
+        <result property="title" column="title"/>
+        <result property="writer" column="writer"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+    <select id="selectList" parameterType="com.example.post.dto.Page" resultMap="postMap">
+        SELECT post_no, title, writer, content, created_at, updated_at
+        FROM posts ORDER BY post_no DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+    <select id="count" resultType="long">SELECT COUNT(*) FROM posts</select>
+    <select id="selectById" resultMap="postMap">
+        SELECT post_no, title, writer, content, created_at, updated_at
+        FROM posts WHERE post_no = #{postNo}
+    </select>
+    <insert id="insert" parameterType="com.example.post.dto.Post"
+            useGeneratedKeys="true" keyProperty="postNo" keyColumn="post_no">
+        INSERT INTO posts (title, writer, content) VALUES (#{title}, #{writer}, #{content})
+    </insert>
+    <update id="update" parameterType="com.example.post.dto.Post">
+        UPDATE posts SET title=#{title}, writer=#{writer}, content=#{content},
+                         updated_at=CURRENT_TIMESTAMP WHERE post_no=#{postNo}
+    </update>
+    <delete id="delete">DELETE FROM posts WHERE post_no=#{postNo}</delete>
+</mapper>
+
+
+===== src/main/resources/templates/Post/list.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시글 목록</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div>
+<h1>게시글 목록</h1><div class="toolbar"><span>총 <strong th:text="${page.totalCount}">0</strong>개의 글</span><a class="button" th:href="@{/Post/insert}">글쓰기</a></div>
+<table><thead><tr><th>번호</th><th>제목</th><th>작성자</th><th class="date">등록일</th></tr></thead><tbody>
+<tr th:if="${#lists.isEmpty(posts)}"><td colspan="4">등록된 게시글이 없습니다.</td></tr>
+<tr th:each="post : ${posts}"><td th:text="${post.postNo}"></td><td class="title"><a th:href="@{/Post/read(PostNo=${post.postNo})}" th:text="${post.title}"></a></td><td th:text="${post.writer}"></td><td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd')}"></td></tr>
+</tbody></table>
+<nav aria-label="페이지 이동"><a th:if="${page.hasPrevious}" th:href="@{/Post/list(page=${page.page - 1})}">이전</a>
+<th:block th:each="n : ${#numbers.sequence(page.startPage, page.endPage)}"><strong th:if="${n == page.page}" th:text="${n}" aria-current="page"></strong><a th:unless="${n == page.page}" th:href="@{/Post/list(page=${n})}" th:text="${n}"></a></th:block>
+<a th:if="${page.hasNext}" th:href="@{/Post/list(page=${page.page + 1})}">다음</a></nav><a th:href="@{/}">홈으로</a>
+</main></body></html>

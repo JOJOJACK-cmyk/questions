@@ -1,0 +1,13 @@
+작성 및 정적 확인: 2026-10-20
+- 필수 Java / XML / HTML 파일 존재 확인
+- PostMapper.xml XML 파싱 통과
+- Mapper 인터페이스 메서드와 XML statement ID 일치 확인
+- namespace와 DTO 참조 경로 확인
+- Gradle 공식 Wrapper 스크립트 및 JAR 포함
+- CRUD/페이징/검증/404 처리의 Spring Boot 통합 테스트 소스 포함
+
+실행 검증 제한:
+현재 환경에 Java 런타임만 있고 javac가 없어 Java 컴파일을 수행하지 못했습니다.
+Gradle 배포판 다운로드에서 Network is unreachable 오류가 발생했습니다.
+따라서 전체 빌드, 통합 테스트, MySQL 실제 접속 및 브라우저 화면 동작은 미검증입니다.
+JDK 17과 인터넷 연결이 가능한 PC에서 gradlew.bat test 후 gradlew.bat bootRun을 실행하세요.

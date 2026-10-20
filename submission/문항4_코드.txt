@@ -1,0 +1,54 @@
+===== src/main/resources/templates/index.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판 홈</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div><h1>게시판 프로젝트</h1><p>Spring Boot · MyBatis · Thymeleaf 기반 MVC 게시판</p><div class="actions"><a class="button" th:href="@{/Post/list}">게시글 목록</a></div></main></body></html>
+
+
+===== src/main/resources/templates/Post/list.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시글 목록</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div>
+<h1>게시글 목록</h1><div class="toolbar"><span>총 <strong th:text="${page.totalCount}">0</strong>개의 글</span><a class="button" th:href="@{/Post/insert}">글쓰기</a></div>
+<table><thead><tr><th>번호</th><th>제목</th><th>작성자</th><th class="date">등록일</th></tr></thead><tbody>
+<tr th:if="${#lists.isEmpty(posts)}"><td colspan="4">등록된 게시글이 없습니다.</td></tr>
+<tr th:each="post : ${posts}"><td th:text="${post.postNo}"></td><td class="title"><a th:href="@{/Post/read(PostNo=${post.postNo})}" th:text="${post.title}"></a></td><td th:text="${post.writer}"></td><td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd')}"></td></tr>
+</tbody></table>
+<nav aria-label="페이지 이동"><a th:if="${page.hasPrevious}" th:href="@{/Post/list(page=${page.page - 1})}">이전</a>
+<th:block th:each="n : ${#numbers.sequence(page.startPage, page.endPage)}"><strong th:if="${n == page.page}" th:text="${n}" aria-current="page"></strong><a th:unless="${n == page.page}" th:href="@{/Post/list(page=${n})}" th:text="${n}"></a></th:block>
+<a th:if="${page.hasNext}" th:href="@{/Post/list(page=${page.page + 1})}">다음</a></nav><a th:href="@{/}">홈으로</a>
+</main></body></html>
+
+
+===== src/main/resources/templates/Post/read.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시글 조회</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div>
+<h1 th:text="${post.title}"></h1><p class="meta">글번호 <span th:text="${post.postNo}"></span> · <span th:text="${post.writer}"></span> · <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></span></p>
+<div class="content" th:text="${post.content}"></div><div class="actions"><a class="button" th:href="@{/Post/update(PostNo=${post.postNo})}">수정</a><a class="button secondary" th:href="@{/Post/list}">목록</a></div>
+</main></body></html>
+
+
+===== src/main/resources/templates/Post/insert.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시글 등록</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div><h1>게시글 등록</h1><form th:action="@{/Post/insert}" method="post" th:object="${post}">
+<label for="title">제목</label><input id="title" th:field="*{title}" maxlength="200" required><p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+<label for="writer">작성자</label><input id="writer" th:field="*{writer}" maxlength="50" required><p class="error" th:if="${#fields.hasErrors('writer')}" th:errors="*{writer}"></p>
+<label for="content">내용</label><textarea id="content" th:field="*{content}" maxlength="10000" required></textarea><p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+<div class="actions"><button type="submit">등록</button><a class="button secondary" th:href="@{/Post/list}">목록</a></div></form></main></body></html>
+
+
+===== src/main/resources/templates/Post/update.html =====
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시글 수정</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main><div class="eyebrow">SPRING BOARD</div><h1>게시글 수정</h1><form th:action="@{/Post/update(PostNo=${post.postNo})}" method="post" th:object="${post}">
+<label for="title">제목</label><input id="title" th:field="*{title}" maxlength="200" required><p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+<label for="writer">작성자</label><input id="writer" th:field="*{writer}" maxlength="50" required><p class="error" th:if="${#fields.hasErrors('writer')}" th:errors="*{writer}"></p>
+<label for="content">내용</label><textarea id="content" th:field="*{content}" maxlength="10000" required></textarea><p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+<div class="actions"><button type="submit">수정</button><a class="button secondary" th:href="@{/Post/list}">목록</a></div></form>
+<form th:action="@{/Post/delete}" method="post" onsubmit="return confirm('게시글을 삭제하시겠습니까?');"><input type="hidden" name="PostNo" th:value="${post.postNo}"><button class="danger" type="submit">삭제</button></form></main></body></html>

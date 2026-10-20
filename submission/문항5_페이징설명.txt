@@ -1,0 +1,8 @@
+문항 5: 페이징 추가 지점
+1. Page.java: 페이지 번호, 크기, 전체 건수, 시작/끝 페이지 및 SQL OFFSET 계산.
+2. PostController.list(): 요청 page와 전체 건수로 Page 생성 후 posts/page를 Model에 전달.
+3. PostService 및 구현체: list(Page), count()를 통해 페이지 단위 목록/전체 건수 조회.
+4. PostMapper: selectList(Page), count() 선언.
+5. PostMapper.xml: COUNT(*)와 LIMIT #{size} OFFSET #{offset} 적용.
+6. Post/list.html: 이전/다음 및 숫자 페이지 링크 표시. 이 뷰도 문항4 제출 코드에 반영됨.
+각 문항의 코드는 페이징까지 반영된 동일한 최종본이다.

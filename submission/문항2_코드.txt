@@ -1,0 +1,98 @@
+===== src/main/java/com/example/post/dto/Post.java =====
+package com.example.post.dto;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime;
+public class Post {
+    private Long postNo;
+    @NotBlank(message="제목을 입력하세요.")
+    @Size(max=200, message="제목은 200자 이하입니다.")
+    private String title;
+    @NotBlank(message="작성자를 입력하세요.")
+    @Size(max=50, message="작성자는 50자 이하입니다.")
+    private String writer;
+    @NotBlank(message="내용을 입력하세요.")
+    @Size(max=10000, message="내용은 10000자 이하입니다.")
+    private String content;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    public Long getPostNo() { return postNo; }
+    public void setPostNo(Long postNo) { this.postNo = postNo; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getWriter() { return writer; }
+    public void setWriter(String writer) { this.writer = writer; }
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+}
+
+
+===== src/main/java/com/example/post/service/PostService.java =====
+package com.example.post.service;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import java.util.List;
+public interface PostService {
+    List<Post> list(Page page);
+    long count();
+    Post read(Long postNo);
+    void insert(Post post);
+    void update(Post post);
+    void delete(Long postNo);
+}
+
+
+===== src/main/java/com/example/post/service/PostServiceImpl.java =====
+package com.example.post.service;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import com.example.post.mapper.PostMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.List;
+@Service
+@Transactional(readOnly=true)
+public class PostServiceImpl implements PostService {
+    private final PostMapper mapper;
+    public PostServiceImpl(PostMapper mapper) { this.mapper = mapper; }
+    @Override public List<Post> list(Page page) { return mapper.selectList(page); }
+    @Override public long count() { return mapper.count(); }
+    @Override public Post read(Long postNo) {
+        Post post = mapper.selectById(postNo);
+        if (post == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+        return post;
+    }
+    @Override @Transactional public void insert(Post post) {
+        if (mapper.insert(post) != 1) throw new IllegalStateException("등록에 실패했습니다.");
+    }
+    @Override @Transactional public void update(Post post) {
+        if (mapper.update(post) != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+    }
+    @Override @Transactional public void delete(Long postNo) {
+        if (mapper.delete(postNo) != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글이 없습니다.");
+    }
+}
+
+
+===== src/main/java/com/example/post/mapper/PostMapper.java =====
+package com.example.post.mapper;
+import com.example.post.dto.Page;
+import com.example.post.dto.Post;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import java.util.List;
+@Mapper
+public interface PostMapper {
+    List<Post> selectList(Page page);
+    long count();
+    Post selectById(@Param("postNo") Long postNo);
+    int insert(Post post);
+    int update(Post post);
+    int delete(@Param("postNo") Long postNo);
+}
